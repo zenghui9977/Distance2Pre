@@ -70,7 +70,7 @@ class OboDist2PreLinear(GruBasic):
         self.dd = dd
 
         # 增加置信矩阵
-        self.confidence_matrix = theano.shared(borrow=True, value=confidence_matrix.astype(theano.config.floatX))
+        self.confidence_matrix = theano.shared(borrow=True, value=np.asarray(confidence_matrix, dtype='float32'))
 
         # 各距离间隔的向量表示，shape=(381,)。
         di = uniform(-rang, rang, (n_dist+1, n_in))   # 多出来一个(填充符)，存放用于补齐用户购买序列/实际不存在的item
@@ -316,10 +316,11 @@ class OboDist2PreLinear(GruBasic):
         # 现在需要取出c_ul，即只需要得到参与训练的这些地点的置信值即可，所有访问过的地点（带mask的）xpidxs
         # c_ul = c_u[xpidxs]报错超出维度， xpidxs含有mask，但是遍历ivector
 
-        # 想法是计算得到的loss_bpr shape(seq_length-1），只需要在loss签名乘对应的置信矩阵即可
+        # 想法是计算得到的loss_bpr shape(seq_length-1），只需要在loss前面乘对应的置信矩阵即可
         # cul * loss_bpr_l最后同样-T.sum得到bpr loss的结果
 
-        bpr = - T.sum(loss_bpr)
+        c_ul = c_u[xpidxs]
+        bpr = c_ul * - T.sum(loss_bpr)
 
         seq_costs = (
             bpr +
